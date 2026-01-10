@@ -52,7 +52,7 @@ suppressMetroWarnings();
 
 // import { setTestDeviceIDAsync } from "expo-ads-admob";
 export const unstable_settings = {
-  initialRouteName: "index",
+  anchor: "index",
 };
 
 // TODO: Customize this

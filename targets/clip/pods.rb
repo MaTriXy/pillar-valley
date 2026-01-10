@@ -1,6 +1,7 @@
 require File.join(File.dirname(`node --print "require.resolve('react-native/package.json')"`), "scripts/react_native_pods")
 
 exclude = [
+  # Bug in Expo Updates preventing it from working with App Clips.
   "expo-updates"
 ]
 use_expo_modules!(exclude: exclude)

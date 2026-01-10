@@ -124,7 +124,8 @@
           }
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      "expo-sqlite"
     ],
     "experiments": {
       "reactCompiler": true,

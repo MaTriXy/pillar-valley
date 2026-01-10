@@ -6,7 +6,7 @@ import { Slate } from "@/constants/Colors";
 import { SF } from "@/components/sf-symbol";
 
 export const unstable_settings = {
-  initialRouteName: "index",
+  anchor: "index",
 };
 
 function BackButton() {
