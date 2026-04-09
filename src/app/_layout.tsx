@@ -21,6 +21,7 @@ import { useUpdatedUpdatesInfoInSettings } from "@/hooks/useUpdatesInAppleSettin
 import { logEvent } from "@/lib/Analytics";
 import { useSyncGlobalAudioWithSettings } from "@/zustand/models";
 import { SF } from "@/components/sf-symbol";
+import { isGlassEffectAPIAvailable } from "expo-glass-effect";
 
 if (process.env.EXPO_OS !== "web") {
   // const { vexo } = require("vexo-analytics");
@@ -124,6 +125,9 @@ function InnerLayout() {
       <ActionSheetProvider>
         <Stack
           screenOptions={{
+            headerBackButtonDisplayMode: isGlassEffectAPIAvailable()
+              ? "minimal"
+              : "default",
             headerTintColor: "white",
             headerStyle: {
               backgroundColor: "#21222B",

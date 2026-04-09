@@ -4,15 +4,17 @@ import { useEffect } from "react";
 import TouchableBounce from "@/components/TouchableBounce";
 import { Slate } from "@/constants/Colors";
 import { SF } from "@/components/sf-symbol";
+import { isGlassEffectAPIAvailable } from "expo-glass-effect";
 
 export const unstable_settings = {
   anchor: "index",
 };
 
-function BackButton() {
-  if (process.env.EXPO_OS === "web") {
+function BackButtonAndroid() {
+  if (process.env.EXPO_OS !== "android") {
     return null;
   }
+
   return (
     <TouchableBounce
       onPress={() => {
@@ -32,9 +34,22 @@ export default function Settings() {
     SplashScreen.hideAsync();
   }, []);
 
+  const sharedToolbarRight = (
+    <Stack.Toolbar placement="right">
+      <Stack.Toolbar.Button
+        icon={"chevron.down"}
+        onPress={() => {
+          router.back();
+        }}
+      />
+    </Stack.Toolbar>
+  );
   return (
     <Stack
       screenOptions={{
+        headerBackButtonDisplayMode: isGlassEffectAPIAvailable()
+          ? "minimal"
+          : "default",
         headerTintColor: "white",
         headerStyle: {
           backgroundColor: "#21222B",
@@ -48,12 +63,18 @@ export default function Settings() {
           backgroundColor: Slate[900],
         },
         headerTitleStyle: { color: "white", fontFamily: "Inter_500Medium" },
-        headerRight: BackButton,
+        headerRight: BackButtonAndroid,
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Settings" }} />
-      <Stack.Screen name="icon" options={{ title: "App Icon" }} />
-      <Stack.Screen name="licenses" options={{ title: "Licenses" }} />
+      <Stack.Screen name="index" options={{ title: "Settings" }}>
+        {sharedToolbarRight}
+      </Stack.Screen>
+      <Stack.Screen name="icon" options={{ title: "App Icon" }}>
+        {sharedToolbarRight}
+      </Stack.Screen>
+      <Stack.Screen name="licenses" options={{ title: "Licenses" }}>
+        {sharedToolbarRight}
+      </Stack.Screen>
     </Stack>
   );
 }
