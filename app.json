@@ -3,12 +3,10 @@
     "name": "Pillar Valley",
     "description": "Immerse yourself in a suave world of zen",
     "slug": "pillar-valley",
-    "privacy": "public",
     "version": "12.0.3",
     "orientation": "portrait",
     "primaryColor": "#F09458",
     "backgroundColor": "#F09458",
-    "jsEngine": "hermes",
     "userInterfaceStyle": "automatic",
     "scheme": "plrvly",
     "locales": {
@@ -69,7 +67,6 @@
         "activitycontinuation:pillarvalley.expo.app"
       ]
     },
-    "newArchEnabled": true,
     "android": {
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.evanbacon.pillarvalley",
       "adaptiveIcon": {
@@ -125,7 +122,8 @@
         }
       ],
       "@bacons/apple-targets",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-audio"
     ],
     "experiments": {
       "reactCompiler": true,

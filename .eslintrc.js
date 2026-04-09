@@ -1,7 +1,7 @@
 module.exports = {
   // parser: "babel-eslint",
   extends: "expo",
-  plugins: ["eslint-plugin-react-compiler", "react", "bacon"],
+  plugins: ["react", "bacon"],
   rules: {
     "react-compiler/react-compiler": "error",
     "bacon/no-empty-styles": "error",

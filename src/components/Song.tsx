@@ -1,31 +1,26 @@
 import * as React from "react";
+import { useAudioPlayer } from "expo-audio";
 
 import { useGlobalAudio } from "../zustand/models";
-import { Audio } from "expo-av";
 
 const SONG_FILE = require("@/assets/audio/song.mp3");
 
 function SongClient() {
   const { enabled } = useGlobalAudio();
-
-  const soundObject = Audio.Sound.createAsync(SONG_FILE, {
-    isLooping: true,
-  });
+  const player = useAudioPlayer(SONG_FILE);
 
   React.useEffect(() => {
+    player.loop = true;
     if (enabled) {
-      soundObject.then(async ({ sound }) => {
-        await sound.setPositionAsync(0);
-        await sound.setIsLoopingAsync(true);
-        sound.playAsync();
-      });
+      player.seekTo(0);
+      player.play();
     } else {
-      soundObject.then(({ sound }) => sound.pauseAsync());
+      player.pause();
     }
     return () => {
-      soundObject.then(({ sound }) => sound.stopAsync());
+      player.pause();
     };
-  }, [enabled, soundObject]);
+  }, [enabled, player]);
 
   return null;
 }

@@ -1,35 +1,31 @@
-import { Audio } from "expo-av";
+import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from "expo-audio";
 
 import { useGlobalAudio } from "./zustand/models";
 
-const audio = {
+const audio: Record<string, number> = {
   // Common
   button_in: require("./assets/audio/button_in.wav"),
   button_out: require("./assets/audio/button_out.wav"),
   unlock: require("./assets/audio/unlock.mp3"),
   // Pillar Valley
-  // "song.mp3": require("./assets/audio/song.mp3"),
+  // song: require("./assets/audio/song.mp3"),
 };
 
-// eslint-disable-line
 class AudioManager {
-  private _pending: Map<string, ReturnType<typeof Audio.Sound.createAsync>> =
-    new Map();
-  sounds: Record<string, Audio.Sound> = {};
+  players: Record<string, AudioPlayer> = {};
 
   private loadAsync = async (name: string) => {
     if (typeof window === "undefined") return;
     await this.setupAsync();
 
-    const item = this.assets[name];
-    const pending = this._pending.get(name) ?? Audio.Sound.createAsync(item);
-    if (!this._pending.has(name)) {
-      this._pending.set(name, pending);
-    }
-    const { sound } = await pending;
-    const soundName = name.substr(0, name.lastIndexOf("."));
-    this.sounds[soundName] = sound;
-    return sound;
+    const existing = this.players[name];
+    if (existing) return existing;
+
+    const source = audio[name];
+    if (!source) return;
+    const player = createAudioPlayer(source);
+    this.players[name] = player;
+    return player;
   };
 
   playAsync = async (name: string, isLooping: boolean = false) => {
@@ -39,46 +35,46 @@ class AudioManager {
       return;
     }
 
-    const soundObject = await this.loadAsync(name);
+    const player = await this.loadAsync(name);
+    if (!player) return;
     try {
-      await soundObject?.setPositionAsync(0);
-      await soundObject?.setIsLoopingAsync(isLooping);
-      await soundObject?.playAsync();
+      player.seekTo(0);
+      player.loop = isLooping;
+      player.play();
     } catch (error) {
       console.warn("Error playing audio", { error });
     }
   };
+
   stopAsync = async (name: string) => {
     if (typeof window === "undefined") return;
-
-    await (await this.loadAsync(name))?.stopAsync();
+    const player = await this.loadAsync(name);
+    if (!player) return;
+    player.pause();
+    player.seekTo(0);
   };
+
   volumeAsync = async (name: string, volume: number) => {
     if (typeof window === "undefined") return;
-
-    await (await this.loadAsync(name))?.setVolumeAsync(volume);
+    const player = await this.loadAsync(name);
+    if (player) player.volume = volume;
   };
 
   pauseAsync = async (name: string) => {
     if (typeof window === "undefined") return;
-
-    await (await this.loadAsync(name))?.pauseAsync();
+    (await this.loadAsync(name))?.pause();
   };
 
   async configureExperienceAudioAsync() {
     if (typeof window === "undefined") return;
 
-    return Audio.setAudioModeAsync({
-      playThroughEarpieceAndroid: false,
-      allowsRecordingIOS: false,
-      // interruptionModeIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
-      playsInSilentModeIOS: false,
-      shouldDuckAndroid: true,
-      // interruptionModeAndroid: Audio.INTERRUPTION_MODE_ANDROID_DO_NOT_MIX,
+    return setAudioModeAsync({
+      playsInSilentMode: false,
+      shouldPlayInBackground: false,
+      shouldRouteThroughEarpiece: false,
+      interruptionMode: "mixWithOthers",
     });
   }
-
-  private assets: Record<string, number> = audio;
 
   _isSetup = false;
   setupPromise: Promise<void> | null = null;
