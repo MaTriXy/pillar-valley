@@ -391,13 +391,16 @@ class Game extends GameObject {
 
   async loadAsync() {
     this.scene = new GameScene();
-    // @ts-ignore: idk
     this.scene.add(this);
     this.camera = await this.createCameraAsync(this._width, this._height);
 
-    const light = new DirectionalLight(0xffffff, 0.9);
-    light.position.set(0, 350, 350);
-    this.scene.add(new HemisphereLight(0xaaaaaa, 0x000000, 0.9), light);
+    // three r155+ uses physically-based light intensities, so the previous
+    // 0.9 values are now far too dim. Bump everything up and warm the
+    // hemisphere ground bounce so the scene reads as vibrant and playful.
+    const sun = new DirectionalLight(0xffffff, 3.2);
+    sun.position.set(0, 350, 350);
+    const sky = new HemisphereLight(0xfff4e0, 0xffb070, 2.4);
+    this.scene.add(sky, sun);
 
     if (this.state === GameStates.Menu) {
       await this.loadMenu();
@@ -534,8 +537,7 @@ class Game extends GameObject {
     this.screenShotTaken = true;
 
     useGameScreenshot.getState().updateScreenshot({
-      // @ts-ignore
-      ref: global.gameRef,
+      ref: null,
       width: this._width,
       height: this._height,
     });

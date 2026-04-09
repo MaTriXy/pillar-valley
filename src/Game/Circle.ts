@@ -1,4 +1,10 @@
-import { CircleGeometry, Color, Mesh, MeshPhongMaterial } from "three";
+import {
+  AdditiveBlending,
+  CircleGeometry,
+  Color,
+  Mesh,
+  MeshBasicMaterial,
+} from "three";
 
 import { setFullMeshAlpha } from "./GameObject";
 
@@ -15,6 +21,10 @@ class AlphaMesh extends Mesh {
   }
 }
 
+/**
+ * The landing pulse on top of each pillar. Rendered as an unlit additive disc
+ * so it reads as a soft halo of light rather than an opaque white pancake.
+ */
 class CircleMesh extends AlphaMesh {
   constructor({
     radius,
@@ -25,10 +35,11 @@ class CircleMesh extends AlphaMesh {
   }) {
     super(
       new CircleGeometry(radius, 32),
-      new MeshPhongMaterial({
+      new MeshBasicMaterial({
         color,
         transparent: true,
-        // side: DoubleSide,
+        blending: AdditiveBlending,
+        depthWrite: false,
       })
     );
   }
@@ -37,11 +48,7 @@ class CircleMesh extends AlphaMesh {
     this.visible = false;
     this.scale.x = 0.001;
     this.scale.y = 0.001;
-    this.alpha = 0.8;
-  };
-
-  explode = () => {
-    // todo tween disapate animation
+    this.alpha = 0.45;
   };
 
   update = () => {};

@@ -1,4 +1,5 @@
 import type { NativeCanvas } from "react-native-wgpu";
+import * as THREE from "three";
 // `three/webgpu` exposes `WebGPURenderer` (and the node-material system).
 // Metro additionally aliases bare `three` imports to this same module so the
 // runtime is consistent across all source files.
@@ -47,11 +48,17 @@ export class ReactNativeCanvas {
 export const makeWebGPURenderer = (
   context: GPUCanvasContext,
   { antialias = true }: { antialias?: boolean } = {}
-) =>
-  new WebGPURenderer({
+) => {
+  const renderer = new WebGPURenderer({
     antialias,
     // `canvas` is accepted at runtime (skill-validated) but the type omits it.
     // @ts-expect-error - extra runtime option not in WebGPURendererParameters
     canvas: new ReactNativeCanvas(context.canvas as unknown as NativeCanvas),
     context,
   });
+  // Keep colors punchy: no tone mapping compression, sRGB output, and the
+  // standard sRGB working space so hex colors render the way they were authored.
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  return renderer;
+};
