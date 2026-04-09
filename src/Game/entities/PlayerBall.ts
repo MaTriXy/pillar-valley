@@ -16,7 +16,9 @@ class PlayerBall extends GameObject {
   private circle?: Circle;
 
   loadAsync = async (scene: any) => {
-    const mesh = new Mesh(PlayerBallGeom.clone(), PlayerBallMaterial.clone());
+    // Geometry is shared (every ball is identical); each ball gets its own
+    // material clone so independent opacity / hide animations don't interfere.
+    const mesh = new Mesh(PlayerBallGeom, PlayerBallMaterial.clone());
     mesh.position.y = 4.5;
     this.add(mesh);
 

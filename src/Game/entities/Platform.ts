@@ -6,6 +6,8 @@ import {
   MeshPhongMaterial,
 } from "three";
 
+import { Easing } from "react-native";
+
 import DoubleGem from "./DoubleGem";
 import Gem from "./Gem";
 import Settings from "../../constants/Settings";
@@ -23,11 +25,26 @@ const pointForGem = (
   y: radius * Math.sin(angle),
 });
 
-// const PlatformGeom = new CylinderBufferGeometry(size, size * 0.2, 1000, 24)
+// One unit-cylinder geometry shared by every platform — we vary the visible
+// size by scaling the mesh per-instance. The taper ratio (top radius / bottom
+// radius) is fixed at 1 / 0.2, matching the original look. Sharing keeps
+// pillar churn from re-uploading vertex buffers to the GPU.
+const PLATFORM_TAPER = 0.2;
+const PLATFORM_HEIGHT = 1000;
+const sharedPlatformGeometry = new CylinderGeometry(
+  1,
+  PLATFORM_TAPER,
+  PLATFORM_HEIGHT,
+  24
+);
 
 class PlatformMesh extends Mesh {
   constructor(size: number, material: Material) {
-    super(new CylinderGeometry(size, size * 0.2, 1000, 24), material);
+    super(sharedPlatformGeometry, material);
+    // Compensate the taper: a unit cylinder has top=1 / bottom=0.2, so
+    // scaling x/z by `size` yields the same silhouette as the old
+    // `new CylinderGeometry(size, size * 0.2, 1000, 24)`.
+    this.scale.set(size, 1, size);
   }
 
   set y(y: number) {
@@ -43,32 +60,12 @@ class PlatformMesh extends Mesh {
   }
   set alpha(value: number) {
     this._alpha = value;
-    const transparent = value !== 1;
-
-    // TODO: Maybe remove
-    if (Array.isArray(this.material)) {
-      this.material.map((material) => {
-        material.transparent = transparent;
-        material.opacity = value;
-      });
-    } else if (this.material) {
-      this.material.transparent = transparent;
-      this.material.opacity = value;
-    }
-
-    this.traverse((child) => {
-      if (child instanceof Mesh) {
-        if (Array.isArray(child.material)) {
-          child.material.map((material) => {
-            material.transparent = transparent;
-            material.opacity = value;
-          });
-        } else if (child.material) {
-          child.material.transparent = transparent;
-          child.material.opacity = value;
-        }
-      }
-    });
+    // Pillars only have a single material and no Mesh children, so we can
+    // skip the recursive traverse and toggling `transparent` (which would
+    // force a shader rebuild every time the value crossed 1).
+    const m = this.material as MeshPhongMaterial;
+    m.transparent = true;
+    m.opacity = value;
   }
 }
 
@@ -87,15 +84,22 @@ class Platform extends GameObject {
 
   private saturation = 0;
   private hue = 19;
+  // Pre-allocated so the per-frame color animation doesn't churn through
+  // `new Color(...)` and a string every tick.
+  private readonly _color = new Color();
+
+  private writeColor(target: Color = this._color) {
+    target.setHSL(this.hue / 360, this.saturation / 100, 0.66);
+    return target;
+  }
 
   get color() {
-    return new Color(`hsl(${this.hue}, ${Math.floor(this.saturation)}%, 66%)`);
+    return this.writeColor();
   }
 
   loadAsync = async (scene: any) => {
-    const color = this.color;
     this.radius = randomRange(radius, radius * 1.9);
-    this.platformMaterial = new MeshPhongMaterial({ color });
+    this.platformMaterial = new MeshPhongMaterial({ color: this.writeColor() });
     this.mesh = new PlatformMesh(this.radius, this.platformMaterial);
     this.mesh.y = -500;
     this.add(this.mesh);
@@ -191,29 +195,41 @@ class Platform extends GameObject {
 
   public animateOut = () => {
     this.animateGemsOut();
-    if (this.mesh) {
-      RNAnimator.to(
-        this.mesh,
-        randomRange(500, 700),
-        {
-          alpha: 0,
-          y: this.getEndPosition(),
-        },
-        {
-          delay: randomRange(0, 200),
-          onComplete: () => this.destroy(),
-        }
-      );
-    }
+    if (!this.mesh) return;
+
+    // If this pillar is mid-`animateIn`, kill that tween so the outgoing
+    // motion doesn't fight the still-rising one on the same target.
+    RNAnimator.killOf(this.mesh);
+
+    // Drop and fade together on a single tween so the pillar is always
+    // *moving* while it dims — never just fading in place. Quadratic ease-in
+    // gives a gravity-like accelerating fall without the harsh snap of a
+    // pure linear drop.
+    RNAnimator.to(
+      this.mesh,
+      randomRange(650, 800),
+      {
+        alpha: 0,
+        y: randomRange(-1500, -1200),
+      },
+      {
+        delay: randomRange(0, 70),
+        easing: Easing.in(Easing.quad),
+        onComplete: () => this.destroy(),
+      }
+    );
   };
 
   public animateIn = () => {
     if (!this.mesh) return;
-    // this.mesh.alpha = 0;
+    RNAnimator.killOf(this.mesh);
     this.mesh.y = this.getEndPosition();
-    RNAnimator.to(this.mesh, randomRange(500, 700), {
-      y: -500,
-    });
+    RNAnimator.to(
+      this.mesh,
+      randomRange(500, 700),
+      { y: -500 },
+      { easing: Easing.out(Easing.cubic) }
+    );
   };
 
   public becomeTarget = () => {
@@ -229,7 +245,8 @@ class Platform extends GameObject {
       },
       {
         onUpdate: () => {
-          if (this.platformMaterial) this.platformMaterial.color = this.color;
+          // Mutate the existing material color in place — no allocations.
+          if (this.platformMaterial) this.writeColor(this.platformMaterial.color);
         },
       }
     );

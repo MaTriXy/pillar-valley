@@ -10,6 +10,7 @@ import GameStates from "./GameStates";
 import MenuObject from "./MenuObject";
 import PlatformObject from "./entities/Platform";
 import PlayerBall from "./entities/PlayerBall";
+import { RNAnimator } from "./utils/animator";
 import randomRange from "./utils/randomRange";
 import Settings from "../constants/Settings";
 import {
@@ -380,6 +381,10 @@ class Game extends GameObject {
   async reset() {
     super.reset();
 
+    // Drop any tweens left over from the previous round so a freshly-spawned
+    // pillar doesn't inherit a half-finished animation from its predecessor.
+    RNAnimator.clear();
+
     if (this.gameGroup) {
       this.gameGroup.position.z = 0;
       this.gameGroup.position.x = 0;
@@ -394,12 +399,12 @@ class Game extends GameObject {
     this.scene.add(this);
     this.camera = await this.createCameraAsync(this._width, this._height);
 
-    // three r155+ uses physically-based light intensities, so the previous
-    // 0.9 values are now far too dim. Bump everything up and warm the
-    // hemisphere ground bounce so the scene reads as vibrant and playful.
-    const sun = new DirectionalLight(0xffffff, 3.2);
+    // three r155+ uses physically-based light intensities, so the original
+    // 0.9 values came out far too dim. Tuned to read warm and playful
+    // without blowing the pillar tops out into a white glow.
+    const sun = new DirectionalLight(0xffffff, 2.4);
     sun.position.set(0, 350, 350);
-    const sky = new HemisphereLight(0xfff4e0, 0xffb070, 2.4);
+    const sky = new HemisphereLight(0xfff4e0, 0xffb070, 1.6);
     this.scene.add(sky, sun);
 
     if (this.state === GameStates.Menu) {
@@ -578,6 +583,11 @@ class Game extends GameObject {
   };
 
   update(delta: number, time: number) {
+    // Drive every running tween from the game's own clock so animations
+    // share the render loop instead of going through React Native's
+    // Animated bridge.
+    RNAnimator.tick(delta * 1000);
+
     if (!this.camera) return;
 
     if (this.state === GameStates.Menu) {

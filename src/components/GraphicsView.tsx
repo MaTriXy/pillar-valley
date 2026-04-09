@@ -130,7 +130,11 @@ export default class GraphicsView extends React.Component<Props> {
       if (!this.gpuContext) return;
       this.rafID = requestAnimationFrame(render);
       if (!this.props.isPaused) {
-        onRender(clock.getDelta(), clock.getElapsedTime());
+        // Cap the delta so a JS hitch (asset loading, GC, app backgrounded
+        // for a moment) doesn't cause tweens or game logic to jump forward
+        // half a second on the next frame.
+        const delta = Math.min(clock.getDelta(), 1 / 30);
+        onRender(delta, clock.getElapsedTime());
         this.gpuContext.present();
       }
     };
