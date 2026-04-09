@@ -32,6 +32,10 @@ async function loadAssetTextureAsync(moduleId: number): Promise<THREE.Texture> {
   const bitmap = await createImageBitmap(blob);
 
   const texture = new THREE.Texture(bitmap as unknown as HTMLImageElement);
+  // Mark the source as sRGB-encoded so the renderer decodes it to linear
+  // before lighting/output instead of treating raw bytes as linear (which
+  // causes the artwork to read washed out / over-bright).
+  texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
   return texture;
 }
@@ -41,7 +45,9 @@ async function loadMenuMaterialAsync(
   color: number
 ): Promise<THREE.Material[]> {
   const texture = await loadAssetTextureAsync(asset);
-  const image = new THREE.MeshBasicMaterial({ map: texture });
+  // Tint the unlit logo face down a touch so it sits in the same value
+  // range as the lit pillar sides instead of glowing white.
+  const image = new THREE.MeshBasicMaterial({ map: texture, color: 0xc8c8c8 });
 
   const material = new FlatMaterial({ color });
 
