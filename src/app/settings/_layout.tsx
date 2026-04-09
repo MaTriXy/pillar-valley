@@ -66,7 +66,12 @@ export default function Settings() {
         headerRight: BackButtonAndroid,
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Settings" }}>
+      <Stack.Screen
+        name="index"
+        options={{
+          title: "Settings",
+        }}
+      >
         {sharedToolbarRight}
       </Stack.Screen>
       <Stack.Screen name="icon" options={{ title: "App Icon" }}>
