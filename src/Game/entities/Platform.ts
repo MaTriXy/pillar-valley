@@ -161,12 +161,16 @@ class Platform extends GameObject {
 
   private saturation = 0;
   private hue = 19;
+  private lightness = 66;
+  // Animated 0..1 — drives a bright-orange emissive flash on land that fades
+  // back to neutral.
+  private flash = 0;
   // Pre-allocated so the per-frame color animation doesn't churn through
   // `new Color(...)` and a string every tick.
   private readonly _color = new Color();
 
   private writeColor(target: Color = this._color) {
-    target.setHSL(this.hue / 360, this.saturation / 100, 0.66);
+    target.setHSL(this.hue / 360, this.saturation / 100, this.lightness / 100);
     return target;
   }
 
@@ -179,6 +183,7 @@ class Platform extends GameObject {
     this.platformMaterial = new MeshPhongMaterial({
       color: this.writeColor(),
       flatShading: true,
+      emissive: 0x000000,
     });
     this.mesh = new PlatformMesh(this.radius, this.platformMaterial);
     this.mesh.y = -500;
@@ -270,7 +275,7 @@ class Platform extends GameObject {
   };
 
   public becomeCurrent = () => {
-    this._animateColorTo(66);
+    this._lightUp();
   };
 
   public animateOut = () => {
@@ -316,18 +321,52 @@ class Platform extends GameObject {
     // this._animateColorTo(33);
   };
 
-  private _animateColorTo = (saturation: number) => {
+  // Snappy "land on me" reaction: punch the base color toward a vivid orange
+  // *and* fire a quick emissive flash that decays back to nothing. Two tweens
+  // on different curves so the flash front-loads the energy and the base
+  // color settles in behind it.
+  private _lightUp = () => {
+    if (!this.platformMaterial) return;
+
+    // 1) Settle into a brighter, more saturated orange that stays.
     RNAnimator.to(
       this,
-      500,
+      450,
       {
-        saturation,
+        hue: 28,
+        saturation: 92,
+        lightness: 62,
       },
       {
+        easing: Easing.out(Easing.cubic),
         onUpdate: () => {
-          // Mutate the existing material color in place — no allocations.
           if (this.platformMaterial)
             this.writeColor(this.platformMaterial.color);
+        },
+      },
+    );
+
+    // 2) Emissive flash: jump to full, ease back to 0 over a longer tail so
+    //    the pillar visibly "lights up" the moment the player touches down.
+    this.flash = 1;
+    if (this.platformMaterial)
+      this.platformMaterial.emissive.setRGB(1, 0.45, 0.1);
+    RNAnimator.to(
+      this,
+      650,
+      {
+        flash: 0,
+      },
+      {
+        easing: Easing.out(Easing.quad),
+        onUpdate: () => {
+          if (!this.platformMaterial) return;
+          // Bright orange flash, scaled by `flash` so it fades to black.
+          this.platformMaterial.emissive.setRGB(
+            1.0 * this.flash,
+            0.45 * this.flash,
+            0.1 * this.flash,
+          );
         },
       },
     );
